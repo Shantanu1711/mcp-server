@@ -48,10 +48,6 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Initialize session state for chat history
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-
 # Title
 st.title("📚 PDF Chatbot")
 st.markdown("Ask questions about your PDF documents!")
@@ -86,70 +82,25 @@ def send_message(message):
         logging.exception("Unexpected error occurred")
         return f"Error: {str(e)}"
 
-# Display chat history
-for message in st.session_state.messages:
-    content = html.escape(message["content"])  # escape for safety
-    if message["role"] == "user":
-        st.markdown(f"""
-        <div class="message-box">
-            <strong>You:</strong><br>{content}
-        </div>
-        """, unsafe_allow_html=True)
-    else:
-        st.markdown(f"""
-        <div class="message-box">
-            <strong>Assistant:</strong><br>{content}
-        </div>
-        """, unsafe_allow_html=True)
-
-# Chat input section (no form - fixes the double-click issue)
-user_input = st.text_input(
-    "Your question:",
-    placeholder="Type your question here...",
-    key="user_input"
-)
+# Input and button
+user_input = st.text_input("Your question:", placeholder="Type your question here...")
 send_button = st.button("Send")
 
-# Handle user input
+# Handle send click
 if send_button and user_input:
-    # Add user message to chat history
-    st.session_state.messages.append({"role": "user", "content": user_input})
+    # Display user question immediately
+    st.markdown(f"""
+    <div class="message-box">
+        <strong>You:</strong><br>{html.escape(user_input)}
+    </div>
+    """, unsafe_allow_html=True)
 
-    # Get response from MCP server
+    # Get response and display immediately
     with st.spinner("Thinking..."):
         response = send_message(user_input)
 
-    # Add assistant response to chat history
-    st.session_state.messages.append({"role": "assistant", "content": response})
-
-    # Clear input field
-    st.session_state["user_input"] = ""
-
-    # ✅ Rerun to force immediate UI update (works in old & new Streamlit)
-    if hasattr(st, "rerun"):
-        st.rerun()
-    else:
-        st.experimental_rerun()
-
-# Sidebar with instructions & Clear Chat button
-with st.sidebar:
-    st.markdown("""
-    ## How to use
-    1. Place your PDF files in the `docs` directory
-    2. Run `process_documents.py` to process the PDFs
-    3. Start the MCP server with `python mcp_server.py`
-    4. Ask questions about your documents!
-    
-    ## Features
-    - PDF document processing
-    - Semantic search
-    - Context-aware responses
-    - Powered by Hugging Face
-    """)
-    
-    if st.button("🔄 Clear Chat"):
-        st.session_state.messages = []
-        if hasattr(st, "rerun"):
-            st.rerun()
-        else:
-            st.experimental_rerun()
+    st.markdown(f"""
+    <div class="message-box">
+        <strong>Assistant:</strong><br>{html.escape(response)}
+    </div>
+    """, unsafe_allow_html=True)
