@@ -16,40 +16,34 @@ st.set_page_config(
     layout="wide"
 )
 
-# Custom CSS
+# Custom CSS: white background, black text, simple boxes
 st.markdown("""
 <style>
-    .main {
-        padding: 2rem;
+    body, .stApp {
+        background-color: white !important;
+        color: black !important;
+    }
+    .message-box {
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        background-color: white;
+        color: black;
+        font-size: 1.1rem;
     }
     .stTextInput>div>div>input {
         font-size: 1.2rem;
+        background-color: white;
+        color: black;
     }
-    .chat-message {
-        padding: 1.5rem;
-        border-radius: 0.5rem;
-        margin-bottom: 1rem;
-        display: flex;
-        flex-direction: column;
-    }
-    .user-message {
-        background-color: #2b313e;
-    }
-    .assistant-message {
-        background-color: #1e1e1e;
-    }
-    .message-content {
-        margin-top: 0.5rem;
-        white-space: pre-wrap;
-        font-size: 1.1rem;
-        line-height: 1.5;
-    }
-    .error-message {
-        background-color: #ff4444;
+    .stButton>button {
+        background-color: #4CAF50;
         color: white;
-        padding: 1rem;
-        border-radius: 0.5rem;
-        margin: 1rem 0;
+        padding: 10px 24px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -95,38 +89,25 @@ def send_message(message):
 # Display chat history
 for message in st.session_state.messages:
     content = html.escape(message["content"])  # escape for safety
-    with st.container():
-        if message["role"] == "user":
-            st.markdown(f"""
-            <div class="chat-message user-message">
-                <strong>You:</strong>
-                <div class="message-content">{content}</div>
-            </div>
-            """, unsafe_allow_html=True)
-        else:
-            # Check if the message is an error
-            if message["content"].startswith("Error:"):
-                st.markdown(f"""
-                <div class="chat-message error-message">
-                    <strong>Error:</strong>
-                    <div class="message-content">{content}</div>
-                </div>
-                """, unsafe_allow_html=True)
-            else:
-                st.markdown(f"""
-                <div class="chat-message assistant-message">
-                    <strong>Assistant:</strong>
-                    <div class="message-content">{content}</div>
-                </div>
-                """, unsafe_allow_html=True)
+    if message["role"] == "user":
+        st.markdown(f"""
+        <div class="message-box">
+            <strong>You:</strong><br>{content}
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.markdown(f"""
+        <div class="message-box">
+            <strong>Assistant:</strong><br>{content}
+        </div>
+        """, unsafe_allow_html=True)
 
-# Chat input
-with st.form(key="chat_form"):
-    user_input = st.text_input("Your question:", placeholder="Type your question here...")
-    submit_button = st.form_submit_button("Send")
+# Chat input section (no form - fixes the double-click issue)
+user_input = st.text_input("Your question:", placeholder="Type your question here...")
+send_button = st.button("Send")
 
 # Handle user input
-if submit_button and user_input:
+if send_button and user_input:
     # Add user message to chat history
     st.session_state.messages.append({"role": "user", "content": user_input})
     
