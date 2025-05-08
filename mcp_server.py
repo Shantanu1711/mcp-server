@@ -49,7 +49,7 @@ if not pinecone_api_key:
 
 pinecone_instance = Pinecone(api_key=pinecone_api_key)
 
-# Create an index if it doesn't exist (you can move this to setup script later)
+# Create an index if it doesn't exist
 collection_name = "documents"
 if collection_name not in pinecone_instance.list_indexes().names():
     pinecone_instance.create_index(
@@ -66,6 +66,10 @@ index = pinecone_instance.Index(collection_name)
 
 # FastAPI app
 app = FastAPI()
+
+# Hugging Face API setup
+API_URL = f"{config['model']['inference_endpoint']}{config['model']['model']}"
+headers = {"Authorization": f"Bearer {HF_API_KEY}"}
 
 
 class Query(BaseModel):
@@ -88,22 +92,17 @@ class RetrieverTool:
                 "k": {"type": "integer", "default": 3}
             }
         }
-        # Attach the index
         self.collection = index
 
     def call(self, query: str, k: int = 3) -> List[Document]:
         try:
-            # Get query embedding
             query_embedding = model.encode(query)
-
-            # Search in Pinecone using query
             results = self.collection.query(
                 vector=query_embedding.tolist(),
                 top_k=k,
                 include_metadata=True
             )
 
-            # Format results
             documents = []
             matches = results.get("matches", [])
             if matches:
@@ -120,6 +119,48 @@ class RetrieverTool:
             raise
 
 
+def check_relevance(context: str, question: str) -> bool:
+    relevance_prompt = f"""
+Is the following question relevant to the context below? Answer only YES or NO.
+
+Context:
+{context}
+
+Question:
+{question}
+"""
+    payload = {
+        "inputs": relevance_prompt,
+        "parameters": {
+            "max_new_tokens": 10,
+            "temperature": 0.0  # deterministic response
+        }
+    }
+
+    try:
+        response = requests.post(API_URL, headers=headers, json=payload)
+        response.raise_for_status()
+        response_data = response.json()
+        print("Relevance check response:", response_data)
+
+        if isinstance(response_data, list) and len(response_data) > 0:
+            generated_text = response_data[0].get("generated_text", "").strip().lower()
+        elif isinstance(response_data, dict):
+            generated_text = response_data.get("generated_text", "").strip().lower()
+        else:
+            print("Unexpected response format for relevance check.")
+            return False
+
+        if "yes" in generated_text:
+            return True
+        else:
+            return False
+
+    except Exception as e:
+        print(f"Error during relevance check: {str(e)}")
+        return True  # fallback: allow if relevance check fails
+
+
 # Initialize tools
 retriever_tool = RetrieverTool()
 
@@ -133,10 +174,16 @@ async def chat(query: Query):
         if not documents:
             return {"response": "I couldn't find relevant information. Please clarify your question."}
 
-        # Format context from documents
+        # Prepare context from documents
         context = "\n\n".join([doc.content for doc in documents])
 
-        # Create prompt with context
+        # Step 1: Check relevance first
+        is_relevant = check_relevance(context, query.text)
+
+        if not is_relevant:
+            return {"response": "Your question doesn't seem related to the document content. Please clarify your question."}
+
+        # Step 2: If relevant, proceed to answer the question
         prompt = f"""Context information is below.
 ---------------------
 {context}
@@ -144,10 +191,6 @@ async def chat(query: Query):
 Given the context information, please answer the following question. If you cannot find the answer in the context, say "I don't know."
 
 Question: {query.text}"""
-
-        # Get response from Hugging Face API
-        API_URL = f"{config['model']['inference_endpoint']}{config['model']['model']}"
-        headers = {"Authorization": f"Bearer {HF_API_KEY}"}
 
         payload = {
             "inputs": prompt,
@@ -164,14 +207,11 @@ Question: {query.text}"""
             response.raise_for_status()
             response_data = response.json()
 
-            # Debug print
             print("API Response:", response_data)
 
-            # Handle different response formats
             if isinstance(response_data, list) and len(response_data) > 0:
                 if "generated_text" in response_data[0]:
                     generated_text = response_data[0]["generated_text"]
-                    # Clean up the response text
                     if generated_text.startswith(prompt):
                         generated_text = generated_text.replace(prompt, "").strip()
                     return {"response": generated_text}
