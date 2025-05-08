@@ -11,8 +11,8 @@ logging.basicConfig(level=LOG_LEVEL, format='%(asctime)s - %(levelname)s - %(mes
 
 # Configure the page
 st.set_page_config(
-    page_title="PDF Chatbot",
-    page_icon="📚",
+    page_title="Document Chatbot",
+    page_icon="📄",
     layout="wide"
 )
 
@@ -49,8 +49,8 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Title
-st.title("📚 PDF Chatbot")
-st.markdown("Ask questions about your PDF documents!")
+st.title("📄 Document Chatbot")
+st.markdown("Ask questions about your documents!")
 
 # Get API URL from secrets or fallback to localhost
 API_URL = st.secrets.get("BACKEND_API_URL", "http://localhost:8000/chat")
