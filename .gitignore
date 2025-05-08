@@ -1,0 +1,19 @@
+# Python cache & virtual env
+__pycache__/
+*.py[cod]
+*.pyo
+venv/
+
+# Environment files
+.env/
+.env
+
+# VS Code settings
+.vscode/
+
+# Docs folder
+docs/
+
+# Other common ignores
+*.log
+*.sqlite3

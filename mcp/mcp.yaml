@@ -1,0 +1,29 @@
+server:
+  host: "0.0.0.0"
+  port: 8000
+
+model:
+  provider: "huggingface"
+  model: "HuggingFaceH4/zephyr-7b-beta"  # Fast, efficient model good for cloud
+  api_key: "${HF_API_KEY}"
+  max_tokens: 1000
+  temperature: 0.7
+  inference_endpoint: "https://api-inference.huggingface.co/models/"
+
+vector_store:
+  type: "faiss"
+  path: "embeddings/faiss_index"
+  embedding_model: "all-MiniLM-L6-v2"
+
+tools:
+  - name: "document_search"
+    description: "Search for relevant document chunks based on semantic similarity"
+    module: "tools.document_search"
+    class: "DocumentSearchTool"
+    config:
+      top_k: 3
+      similarity_threshold: 0.7
+
+data:
+  pdf_directory: "data/pdfs"
+  webpage_directory: "data/webpages" 
