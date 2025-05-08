@@ -103,20 +103,33 @@ for message in st.session_state.messages:
         """, unsafe_allow_html=True)
 
 # Chat input section (no form - fixes the double-click issue)
-user_input = st.text_input("Your question:", placeholder="Type your question here...")
+user_input = st.text_input(
+    "Your question:",
+    placeholder="Type your question here...",
+    key="user_input"
+)
 send_button = st.button("Send")
 
 # Handle user input
 if send_button and user_input:
     # Add user message to chat history
     st.session_state.messages.append({"role": "user", "content": user_input})
-    
+
     # Get response from MCP server
     with st.spinner("Thinking..."):
         response = send_message(user_input)
-    
+
     # Add assistant response to chat history
     st.session_state.messages.append({"role": "assistant", "content": response})
+
+    # Clear input field
+    st.session_state["user_input"] = ""
+
+    # ✅ Rerun to force immediate UI update (works in old & new Streamlit)
+    if hasattr(st, "rerun"):
+        st.rerun()
+    else:
+        st.experimental_rerun()
 
 # Sidebar with instructions & Clear Chat button
 with st.sidebar:
@@ -136,4 +149,7 @@ with st.sidebar:
     
     if st.button("🔄 Clear Chat"):
         st.session_state.messages = []
-        st.experimental_rerun()
+        if hasattr(st, "rerun"):
+            st.rerun()
+        else:
+            st.experimental_rerun()
