@@ -1,6 +1,5 @@
 altair==5.5.0
 annotated-types==0.7.0
-anthropic==0.50.0
 anyio==4.9.0
 asgiref==3.8.1
 attrs==25.3.0
@@ -12,14 +11,12 @@ build==1.2.2.post1
 cachetools==5.5.2
 certifi==2025.4.26
 charset-normalizer==3.4.2
-chromadb==1.0.8
 click==8.1.8
 colorama==0.4.6
 coloredlogs==15.0.1
 Deprecated==1.2.18
 distro==1.9.0
 durationpy==0.9
-faiss-cpu==1.11.0
 fastapi==0.115.9
 filelock==3.18.0
 flatbuffers==25.2.10
@@ -43,7 +40,6 @@ jiter==0.9.0
 joblib==1.5.0
 jsonschema==4.23.0
 jsonschema-specifications==2025.4.1
-kubernetes==32.0.1
 markdown-it-py==3.0.0
 MarkupSafe==3.0.2
 mdurl==0.1.2
@@ -53,7 +49,6 @@ narwhals==1.38.0
 networkx==3.4.2
 numpy==2.2.5
 oauthlib==3.2.2
-ollama==0.4.8
 onnxruntime==1.21.1
 opentelemetry-api==1.32.1
 opentelemetry-exporter-otlp-proto-common==1.32.1
