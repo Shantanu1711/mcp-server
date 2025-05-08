@@ -2,9 +2,12 @@ import streamlit as st
 import requests
 import json
 import logging
+import html
+import os
 
-# Configure logging
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+# Configure logging (can control via env var)
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
+logging.basicConfig(level=LOG_LEVEL, format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Configure the page
 st.set_page_config(
@@ -59,13 +62,18 @@ if "messages" not in st.session_state:
 st.title("📚 PDF Chatbot")
 st.markdown("Ask questions about your PDF documents!")
 
+# Get API URL from secrets or fallback to localhost
+API_URL = st.secrets.get("BACKEND_API_URL", "http://localhost:8000/chat")
+
 # Function to send message to MCP server
 def send_message(message):
     try:
+        logging.debug(f"Sending message: {message}")
         response = requests.post(
-            "http://localhost:8000/chat",
+            API_URL,
             json={"text": message}
         )
+        logging.debug(f"Response status: {response.status_code}")
         if response.status_code == 200:
             response_data = response.json()
             if "response" in response_data:
@@ -73,21 +81,26 @@ def send_message(message):
             else:
                 return f"Unexpected response format: {response_data}"
         else:
-            error_detail = response.json().get("detail", "Unknown error")
+            try:
+                error_detail = response.json().get("detail", "Unknown error")
+            except json.JSONDecodeError:
+                error_detail = response.text  # fallback to raw text
             return f"Error: Server returned status code {response.status_code}\nDetails: {error_detail}"
     except requests.exceptions.ConnectionError:
-        return "Error: Could not connect to the server. Make sure the FastAPI server is running at http://localhost:8000"
+        return f"Error: Could not connect to the server at {API_URL}. Please check if it's running."
     except Exception as e:
+        logging.exception("Unexpected error occurred")
         return f"Error: {str(e)}"
 
 # Display chat history
 for message in st.session_state.messages:
+    content = html.escape(message["content"])  # escape for safety
     with st.container():
         if message["role"] == "user":
             st.markdown(f"""
             <div class="chat-message user-message">
                 <strong>You:</strong>
-                <div class="message-content">{message["content"]}</div>
+                <div class="message-content">{content}</div>
             </div>
             """, unsafe_allow_html=True)
         else:
@@ -96,14 +109,14 @@ for message in st.session_state.messages:
                 st.markdown(f"""
                 <div class="chat-message error-message">
                     <strong>Error:</strong>
-                    <div class="message-content">{message["content"]}</div>
+                    <div class="message-content">{content}</div>
                 </div>
                 """, unsafe_allow_html=True)
             else:
                 st.markdown(f"""
                 <div class="chat-message assistant-message">
                     <strong>Assistant:</strong>
-                    <div class="message-content">{message["content"]}</div>
+                    <div class="message-content">{content}</div>
                 </div>
                 """, unsafe_allow_html=True)
 
@@ -124,11 +137,11 @@ if submit_button and user_input:
     # Add assistant response to chat history
     st.session_state.messages.append({"role": "assistant", "content": response})
 
-# Sidebar with instructions
+# Sidebar with instructions & Clear Chat button
 with st.sidebar:
     st.markdown("""
     ## How to use
-    1. Place your PDF files in the `pdfs` directory
+    1. Place your PDF files in the `docs` directory
     2. Run `process_documents.py` to process the PDFs
     3. Start the MCP server with `python mcp_server.py`
     4. Ask questions about your documents!
@@ -139,3 +152,7 @@ with st.sidebar:
     - Context-aware responses
     - Powered by Hugging Face
     """)
+    
+    if st.button("🔄 Clear Chat"):
+        st.session_state.messages = []
+        st.experimental_rerun()
